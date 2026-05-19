@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Luxury Salon Národní — Prague 1</title>
+
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Montserrat:wght@200;300;400;500;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+
+<!-- Three.js r128 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<!-- GSAP + ScrollTrigger -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --rose:   #ffe4e1;
+    --blush:  #ffb6c1;
+    --deep:   #1a0a0e;
+    --dark:   #0d0608;
+    --gold:   #c9a96e;
+    --glass:  rgba(255,228,225,0.06);
+    --border: rgba(255,182,193,0.18);
+    --text:   #f5e6e8;
+    --muted:  rgba(245,230,232,0.55);
+  }
+
+  html { scroll-behavior: auto; }
+
+  html, body {
+    width: 100%;
+    overflow-x: hidden;
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'Montserrat', sans-serif;
+  }
+
+  /* ── WebGL Canvas ── */
+  #webgl-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ── Particle Canvas ── */
+  #particle-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+  }
+
+  /* ── Scroll Container ── */
+  #scroll-root {
+    position: relative;
+    z-index: 10;
+  }
+
+  /* ── Navbar ── */
+  #navbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.4rem 2.8rem;
+    background: rgba(13,6,8,0.55);
+    backdrop-filter: blur(18px) saturate(1.4);
+    border-bottom: 1px solid var(--border);
+    transition: padding 0.4s ease, background 0.4s ease;
+  }
+  #navbar.scrolled { padding: 0.9rem 2.8rem; background: rgba(13,6,8,0.82); }
+
+  .nav-logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    font-size: 1.15rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--rose);
+    line-height: 1.2;
+  }
+  .nav-logo span { display: block; font-size: 0.62rem; letter-spacing: 0.5em; color: var(--gold); opacity: 0.85; }
+
+  .lang-switcher { display: flex; gap: 0.7rem; align-items: center; }
+  .lang-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    padding: 0.38rem 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+  }
+  .lang-btn:hover, .lang-btn.active {
+    border-color: var(--blush);
+    color: var(--blush);
+    background: rgba(255,182,193,0.08);
+  }
+
+  /* ── Hero ── */
+  #hero {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-eyebrow {
+    font-size: 0.65rem;
+    letter-spacing: 0.5em;
+    text-transform: uppercase;
+    color: var(--gold);
+    opacity: 0.8;
+    margin-bottom: 1.8rem;
+    font-weight: 300;
+  }
+
+  .hero-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(3.2rem, 8vw, 7.5rem);
+    font-weight: 300;
+    line-height: 1.0;
+    text-align: center;
+    letter-spacing: 0.04em;
+    color: var(--rose);
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  .hero-title em { font-style: italic; color: var(--blush); }
+
+  .hero-sub {
+    margin-top: 2rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.42em;
+    text-transform: uppercase;
+    color: var(--muted);
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  .hero-address {
+    margin-top: 1.2rem;
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 1.05rem;
+    color: var(--gold);
+    opacity: 0;
+    letter-spacing: 0.06em;
+  }
+
+  .scroll-indicator {
+    position: absolute;
+    bottom: 2.4rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0.6;
+  }
+  .scroll-indicator span {
+    font-size: 0.58rem;
+    letter-spacing: 0.38em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .scroll-line {
+    width: 1px;
+    height: 48px;
+    background: linear-gradient(to bottom, var(--blush), transparent);
+    animation: scrollPulse 2s ease-in-out infinite;
+  }
+  @keyframes scrollPulse {
+    0%, 100% { opacity: 0.3; transform: scaleY(1); }
+    50% { opacity: 1; transform: scaleY(1.15); }
+  }
+
+  /* ── Section base ── */
+  .section {
+    position: relative;
+    z-index: 10;
+    padding: 8rem 4rem;
+  }
+
+  .section-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.5em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .section-label::before {
+    content: '';
+    display: inline-block;
+    width: 2.5rem;
+    height: 1px;
+    background: var(--gold);
+    opacity: 0.6;
+  }
+
+  .section-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(2.6rem, 5vw, 4.8rem);
+    font-weight: 300;
+    line-height: 1.1;
+    color: var(--rose);
+  }
+  .section-title em { font-style: italic; color: var(--blush); }
+
+  /* ── Services / Bento ── */
+  #services {
+    min-height: 100vh;
+    padding: 8rem 4rem;
+    overflow: hidden;
+  }
+
+  #bento-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: auto auto;
+    gap: 1.2rem;
+    margin-top: 4rem;
+    will-change: transform;
+  }
+
+  .bento-card {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(14px);
+    padding: 2.6rem;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.4s ease;
+    transform-style: preserve-3d;
+    perspective: 800px;
+  }
+  .bento-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,182,193,0.06) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .bento-card:hover { border-color: rgba(255,182,193,0.45); }
+
+  .bento-card.large { grid-column: span 2; min-height: 340px; }
+  .bento-card.tall  { grid-row: span 2; }
+
+  .bento-number {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 4.5rem;
+    font-weight: 300;
+    color: var(--blush);
+    opacity: 0.18;
+    position: absolute;
+    top: 1rem; right: 1.5rem;
+    line-height: 1;
+  }
+
+  .bento-tag {
+    font-size: 0.58rem;
+    letter-spacing: 0.42em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1rem;
+  }
+
+  .bento-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(1.5rem, 2.8vw, 2.4rem);
+    font-weight: 400;
+    color: var(--rose);
+    line-height: 1.15;
+    margin-bottom: 1.2rem;
+  }
+
+  .bento-desc {
+    font-size: 0.78rem;
+    line-height: 1.85;
+    color: var(--muted);
+    filter: blur(5px);
+    transition: filter 0.6s ease;
+    max-width: 34ch;
+  }
+  .bento-card:hover .bento-desc { filter: blur(0); }
+
+  .bento-price {
+    margin-top: 1.6rem;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.5rem;
+    color: var(--gold);
+    font-style: italic;
+  }
+
+  .bento-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.4rem;
+  }
+  .bento-pill {
+    font-size: 0.58rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    padding: 0.28rem 0.75rem;
+    color: var(--muted);
+    transition: all 0.3s ease;
+  }
+  .bento-card:hover .bento-pill {
+    border-color: rgba(255,182,193,0.35);
+    color: var(--blush);
+  }
+
+  .bento-icon {
+    width: 42px;
+    height: 42px;
+    margin-bottom: 1.4rem;
+    opacity: 0.7;
+  }
+
+  /* ── Data pulse labels ── */
+  .data-pulse {
+    position: fixed;
+    font-size: 0.6rem;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--blush);
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 500;
+    text-shadow: 0 0 8px rgba(255,182,193,0.8);
+  }
+
+  /* ── Specialists ── */
+  #specialists { background: transparent; }
+
+  .specialists-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.6rem;
+    margin-top: 4rem;
+  }
+
+  .specialist-card {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+    padding: 2.4rem;
+    transition: border-color 0.4s ease;
+  }
+  .specialist-card:hover { border-color: rgba(255,182,193,0.4); }
+
+  .specialist-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3d1c24, #1a0a0e);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.4rem;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2rem;
+    color: var(--blush);
+    opacity: 0.7;
+    filter: grayscale(1);
+    transition: filter 0.5s ease, opacity 0.5s ease;
+  }
+  .specialist-card:hover .specialist-avatar { filter: grayscale(0); opacity: 1; }
+
+  .specialist-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.4rem;
+    color: var(--rose);
+    margin-bottom: 0.3rem;
+  }
+
+  .specialist-role {
+    font-size: 0.62rem;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1rem;
+    opacity: 0.8;
+  }
+
+  .specialist-bio {
+    font-size: 0.76rem;
+    line-height: 1.8;
+    color: var(--muted);
+  }
+
+  .specialist-skills {
+    margin-top: 1.2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .skill-chip {
+    font-size: 0.56rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    padding: 0.22rem 0.6rem;
+    color: var(--muted);
+    transition: all 0.3s;
+  }
+  .specialist-card:hover .skill-chip { border-color: rgba(255,182,193,0.3); color: var(--blush); }
+
+  /* ── Map Section ── */
+  #map-section {
+    padding: 8rem 4rem;
+    background: transparent;
+  }
+
+  .map-wrapper {
+    margin-top: 3.5rem;
+    display: grid;
+    grid-template-columns: 1fr 1.6fr;
+    gap: 2.5rem;
+    align-items: start;
+  }
+
+  .map-info { display: flex; flex-direction: column; gap: 2rem; }
+
+  .map-info-block {
+    padding: 2rem;
+    background: var(--glass);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(14px);
+  }
+
+  .info-label {
+    font-size: 0.58rem;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.7rem;
+  }
+
+  .info-value {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.25rem;
+    color: var(--rose);
+    line-height: 1.5;
+  }
+
+  .info-sub {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 0.3rem;
+    line-height: 1.7;
+  }
+
+  .map-iframe-wrapper {
+    position: relative;
+    height: 460px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .map-iframe-wrapper iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    filter: invert(0.92) hue-rotate(180deg) saturate(0.6) brightness(0.85);
+    opacity: 0.88;
+  }
+
+  /* ── Footer ── */
+  footer {
+    padding: 5rem 4rem 3rem;
+    border-top: 1px solid var(--border);
+    background: rgba(13,6,8,0.7);
+    backdrop-filter: blur(10px);
+  }
+
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr 1fr;
+    gap: 3rem;
+    margin-bottom: 4rem;
+  }
+
+  .footer-brand-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.4rem;
+    font-weight: 300;
+    letter-spacing: 0.2em;
+    color: var(--rose);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .footer-brand-desc {
+    font-size: 0.73rem;
+    line-height: 1.85;
+    color: var(--muted);
+    max-width: 28ch;
+  }
+
+  .footer-col-title {
+    font-size: 0.6rem;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1.4rem;
+  }
+
+  .footer-links { list-style: none; display: flex; flex-direction: column; gap: 0.7rem; }
+  .footer-links a {
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.3s ease;
+    letter-spacing: 0.05em;
+  }
+  .footer-links a:hover { color: var(--blush); }
+
+  .footer-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 2.5rem;
+    border-top: 1px solid rgba(255,182,193,0.08);
+  }
+
+  .footer-copy {
+    font-size: 0.64rem;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+  }
+
+  .footer-legal {
+    display: flex;
+    gap: 1.5rem;
+  }
+  .footer-legal a {
+    font-size: 0.64rem;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.3s;
+  }
+  .footer-legal a:hover { color: var(--blush); }
+
+  /* ── Divider ── */
+  .section-divider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--border), transparent);
+    margin: 0 auto;
+  }
+
+  /* ── Reveal animations ── */
+  .reveal { opacity: 0; transform: translateY(30px); }
+
+  /* ── Intro overlay ── */
+  #intro-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: var(--dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .intro-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(1.4rem, 4vw, 3.2rem);
+    font-weight: 300;
+    letter-spacing: 0.3em;
+    color: var(--rose);
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  /* Mobile adjustments */
+  @media (max-width: 768px) {
+    .section { padding: 5rem 1.5rem; }
+    #bento-container { grid-template-columns: 1fr; }
+    .bento-card.large { grid-column: span 1; }
+    .specialists-grid { grid-template-columns: 1fr; }
+    .map-wrapper { grid-template-columns: 1fr; }
+    .footer-grid { grid-template-columns: 1fr 1fr; }
+    #navbar { padding: 1rem 1.4rem; }
+    .nav-logo { font-size: 0.85rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Intro Overlay ── -->
+<div id="intro-overlay">
+  <div class="intro-text" id="intro-text">Luxury Salon Národní</div>
+</div>
+
+<!-- ── WebGL Canvas ── -->
+<canvas id="webgl-canvas"></canvas>
+
+<!-- ── Particle Canvas ── -->
+<canvas id="particle-canvas"></canvas>
+
+<!-- ── Navbar ── -->
+<nav id="navbar">
+  <div class="nav-logo">
+    Luxury Salon Národní
+    <span>Prague 1 · Since 2008</span>
+  </div>
+  <div class="lang-switcher">
+    <button class="lang-btn active" data-lang="en">EN</button>
+    <button class="lang-btn" data-lang="cz">CZ</button>
+    <button class="lang-btn" data-lang="ru">RU</button>
+  </div>
+</nav>
+
+<!-- ── Scroll Root ── -->
+<div id="scroll-root">
+
+  <!-- ── Hero ── -->
+  <section id="hero">
+    <p class="hero-eyebrow" id="hero-eyebrow" data-i18n="hero_eyebrow">Prague 1 · Národní 19 · Premium Beauty Atelier</p>
+    <h1 class="hero-title" id="hero-title">
+      <span data-i18n="hero_line1">The Art of</span><br>
+      <em data-i18n="hero_line2">Luxury Beauty</em>
+    </h1>
+    <p class="hero-sub" id="hero-sub" data-i18n="hero_sub">Nail Architecture &amp; Refined Aesthetics</p>
+    <p class="hero-address" id="hero-address">Národní 949/19, Praha 1</p>
+    <div class="scroll-indicator">
+      <div class="scroll-line"></div>
+      <span data-i18n="scroll_hint">Scroll</span>
+    </div>
+  </section>
+
+  <!-- ── Services ── -->
+  <section id="services" class="section">
+    <div class="section-label" data-i18n="services_label">Our Services</div>
+    <h2 class="section-title reveal">
+      <span data-i18n="services_title1">Precision</span> <em data-i18n="services_title2">Crafted</em><br>
+      <span data-i18n="services_title3">for Excellence</span>
+    </h2>
+
+    <div id="bento-container">
+
+      <!-- Card 1 — large -->
+      <div class="bento-card large" data-tilt>
+        <span class="bento-number">01</span>
+        <svg class="bento-icon" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M21 4 L26 16 L39 16 L29 24 L33 37 L21 29 L9 37 L13 24 L3 16 L16 16 Z" stroke="#ffb6c1" stroke-width="1.2" fill="none" opacity="0.7"/>
+        </svg>
+        <div class="bento-tag" data-i18n="card1_tag">Nail Architecture</div>
+        <div class="bento-title" data-i18n="card1_title">Sculptural Nail<br>Art & Design</div>
+        <div class="bento-desc" data-i18n="card1_desc">Our master nail architects blend medical-grade precision with avant-garde artistry. From classical French elegance to bold 3D sculptural motifs — every nail is a miniature canvas curated by Prague's finest hands.</div>
+        <div class="bento-price" data-i18n="card1_price">from 1 890 CZK</div>
+        <div class="bento-tags">
+          <span class="bento-pill">Manicure</span>
+          <span class="bento-pill">Gel Art</span>
+          <span class="bento-pill">Sculpting</span>
+          <span class="bento-pill">3D Design</span>
+        </div>
+      </div>
+
+      <!-- Card 2 — tall -->
+      <div class="bento-card tall" data-tilt>
+        <span class="bento-number">02</span>
+        <svg class="bento-icon" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="21" cy="21" r="16" stroke="#c9a96e" stroke-width="1.2" opacity="0.7"/>
+          <circle cx="21" cy="21" r="8"  stroke="#ffb6c1" stroke-width="1"   opacity="0.5"/>
+          <circle cx="21" cy="21" r="3"  fill="#ffb6c1"   opacity="0.4"/>
+        </svg>
+        <div class="bento-tag" data-i18n="card2_tag">Premium Cosmetics</div>
+        <div class="bento-title" data-i18n="card2_title">Luxury Facial &amp; Skin Ritual</div>
+        <div class="bento-desc" data-i18n="card2_desc">Indulge in our bespoke skincare protocols — BABOR, La Mer, and Swiss cellular therapy combined with advanced dermaplaning, microcurrent sculpting, and 24K gold infusion masks for a luminous, ageless complexion.</div>
+        <div class="bento-price" data-i18n="card2_price">from 2 490 CZK</div>
+        <div class="bento-tags">
+          <span class="bento-pill">Dermaplaning</span>
+          <span class="bento-pill">Microcurrent</span>
+          <span class="bento-pill">Gold Mask</span>
+        </div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="bento-card" data-tilt>
+        <span class="bento-number">03</span>
+        <svg class="bento-icon" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 32 Q21 10 32 32" stroke="#ffb6c1" stroke-width="1.2" fill="none" opacity="0.7"/>
+          <path d="M14 32 Q21 16 28 32" stroke="#c9a96e" stroke-width="1" fill="none" opacity="0.5"/>
+        </svg>
+        <div class="bento-tag" data-i18n="card3_tag">Pedicure</div>
+        <div class="bento-title" data-i18n="card3_title">Ritual Foot &amp; Sole Therapy</div>
+        <div class="bento-desc" data-i18n="card3_desc">Medical pedicure elevated to a wellness ceremony. Spa thermal wraps, callus removal by certified specialists, and lacquer finishing with premium OPI and Gelish collections.</div>
+        <div class="bento-price" data-i18n="card3_price">from 1 290 CZK</div>
+        <div class="bento-tags">
+          <span class="bento-pill">Medical</span>
+          <span class="bento-pill">Spa</span>
+          <span class="bento-pill">Gelish</span>
+        </div>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="bento-card" data-tilt>
+        <span class="bento-number">04</span>
+        <svg class="bento-icon" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="8" width="26" height="26" rx="4" stroke="#ffb6c1" stroke-width="1.2" fill="none" opacity="0.6"/>
+          <path d="M14 21 L20 27 L28 15" stroke="#c9a96e" stroke-width="1.4" fill="none" opacity="0.8"/>
+        </svg>
+        <div class="bento-tag" data-i18n="card4_tag">Massages</div>
+        <div class="bento-title" data-i18n="card4_title">Luxury Body &amp; Relaxation Massage</div>
+        <div class="bento-desc" data-i18n="card4_desc">Swedish, deep-tissue, hot-stone, and signature Prague aromatic rituals tailored to your body's needs. Our therapists hold certifications in European and Eastern wellness traditions.</div>
+        <div class="bento-price" data-i18n="card4_price">from 1 690 CZK</div>
+        <div class="bento-tags">
+          <span class="bento-pill">Swedish</span>
+          <span class="bento-pill">Hot Stone</span>
+          <span class="bento-pill">Aromatic</span>
+        </div>
+      </div>
+
+      <!-- Card 5 — large -->
+      <div class="bento-card large" data-tilt>
+        <span class="bento-number">05</span>
+        <div class="bento-tag" data-i18n="card5_tag">Exclusive Packages</div>
+        <div class="bento-title" data-i18n="card5_title">The Praha Prestige Full-Day Ritual</div>
+        <div class="bento-desc" data-i18n="card5_desc">Our signature full-day beauty immersion: morning facial ritual, chef-curated lunch break, afternoon nail architecture session, evening massage &amp; finishing. The complete luxury experience of Národní 19.</div>
+        <div class="bento-price" data-i18n="card5_price">from 8 900 CZK</div>
+        <div class="bento-tags">
+          <span class="bento-pill">Full Day</span>
+          <span class="bento-pill">All Inclusive</span>
+          <span class="bento-pill">Bespoke</span>
+          <span class="bento-pill">VIP</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- ── Specialists ── -->
+  <section id="specialists" class="section">
+    <div class="section-label" data-i18n="spec_label">Our Team</div>
+    <h2 class="section-title reveal">
+      <em data-i18n="spec_title1">Master</em> <span data-i18n="spec_title2">Specialists</span>
+    </h2>
+    <div class="specialists-grid">
+
+      <div class="specialist-card reveal">
+        <div class="specialist-avatar">A</div>
+        <div class="specialist-name">Anežka Nováková</div>
+        <div class="specialist-role" data-i18n="spec1_role">Head Nail Architect · 14 years</div>
+        <div class="specialist-bio" data-i18n="spec1_bio">International finalist at the Nailympia Championships, London. Anežka fuses Czech artisanal tradition with contemporary nail sculpture techniques, creating wearable miniature art.</div>
+        <div class="specialist-skills">
+          <span class="skill-chip">3D Art</span>
+          <span class="skill-chip">Acrygel</span>
+          <span class="skill-chip">Airbrush</span>
+          <span class="skill-chip">Correction</span>
+        </div>
+      </div>
+
+      <div class="specialist-card reveal">
+        <div class="specialist-avatar">M</div>
+        <div class="specialist-name">Martina Horáčková</div>
+        <div class="specialist-role" data-i18n="spec2_role">Senior Aesthetician · 11 years</div>
+        <div class="specialist-bio" data-i18n="spec2_bio">Certified BABOR and Swiss Cellulite Academy specialist. Martina's microcurrent sculpting protocols have earned acclaim among Prague's most demanding clientele.</div>
+        <div class="specialist-skills">
+          <span class="skill-chip">BABOR</span>
+          <span class="skill-chip">Microcurrent</span>
+          <span class="skill-chip">RF Lifting</span>
+          <span class="skill-chip">Dermaplaning</span>
+        </div>
+      </div>
+
+      <div class="specialist-card reveal">
+        <div class="specialist-avatar">K</div>
+        <div class="specialist-name">Klára Svobodová</div>
+        <div class="specialist-role" data-i18n="spec3_role">Wellness Therapist · 9 years</div>
+        <div class="specialist-bio" data-i18n="spec3_bio">Trained at the Thai Massage Institute in Chiang Mai and the Vienna Wellness Academy. Klára's intuitive approach to bodywork restores equilibrium at the deepest level.</div>
+        <div class="specialist-skills">
+          <span class="skill-chip">Swedish</span>
+          <span class="skill-chip">Thai</span>
+          <span class="skill-chip">Aromatherapy</span>
+          <span class="skill-chip">Hot Stone</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- ── Map ── -->
+  <section id="map-section">
+    <div class="section-label" data-i18n="map_label">Find Us</div>
+    <h2 class="section-title reveal" data-i18n="map_title">Národní 19, <em>Praha 1</em></h2>
+    <div class="map-wrapper">
+      <div class="map-info">
+        <div class="map-info-block reveal">
+          <div class="info-label" data-i18n="addr_label">Address</div>
+          <div class="info-value">Národní 949/19</div>
+          <div class="info-sub">110 00 Praha 1 — Nové Město<br>Czech Republic</div>
+        </div>
+        <div class="map-info-block reveal">
+          <div class="info-label" data-i18n="hours_label">Opening Hours</div>
+          <div class="info-value" data-i18n="hours_value">Monday – Saturday</div>
+          <div class="info-sub">09:00 – 20:00<br><span data-i18n="sunday">Sunday: 10:00 – 18:00</span></div>
+        </div>
+        <div class="map-info-block reveal">
+          <div class="info-label" data-i18n="contact_label">Contact</div>
+          <div class="info-value">+420 777 123 456</div>
+          <div class="info-sub">info@luxurysalon-narodni.cz</div>
+        </div>
+        <div class="map-info-block reveal">
+          <div class="info-label" data-i18n="transit_label">Public Transport</div>
+          <div class="info-sub" data-i18n="transit_value">Metro B — Národní třída (2 min walk)<br>Tram 6, 9, 18, 22 — Národní divadlo</div>
+        </div>
+      </div>
+      <div class="map-iframe-wrapper reveal">
+        <iframe
+          src="https://maps.google.com/maps?q=N%C3%A1rodn%C3%AD+949%2F19%2C+110+00+Praha+1&t=&z=16&ie=UTF8&iwloc=&output=embed"
+          allowfullscreen
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+          title="Luxury Salon Národní location">
+        </iframe>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <div class="footer-grid">
+      <div>
+        <div class="footer-brand-name">Luxury Salon Národní</div>
+        <div class="footer-brand-desc" data-i18n="footer_desc">Prague's premier beauty atelier at the heart of the city. Where craftsmanship meets contemporary luxury.</div>
+      </div>
+      <div>
+        <div class="footer-col-title" data-i18n="footer_services">Services</div>
+        <ul class="footer-links">
+          <li><a href="#" data-i18n="f_nail">Nail Architecture</a></li>
+          <li><a href="#" data-i18n="f_facial">Luxury Facials</a></li>
+          <li><a href="#" data-i18n="f_pedi">Medical Pedicure</a></li>
+          <li><a href="#" data-i18n="f_massage">Massage Rituals</a></li>
+          <li><a href="#" data-i18n="f_pkg">VIP Packages</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-col-title" data-i18n="footer_atelier">Atelier</div>
+        <ul class="footer-links">
+          <li><a href="#" data-i18n="f_about">About Us</a></li>
+          <li><a href="#" data-i18n="f_team">Our Team</a></li>
+          <li><a href="#" data-i18n="f_booking">Book Online</a></li>
+          <li><a href="#" data-i18n="f_gift">Gift Cards</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-col-title" data-i18n="footer_follow">Follow</div>
+        <ul class="footer-links">
+          <li><a href="#">Instagram</a></li>
+          <li><a href="#">Facebook</a></li>
+          <li><a href="#">Pinterest</a></li>
+          <li><a href="#" data-i18n="f_reviews">Google Reviews</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2025 Luxury Salon Národní s.r.o. · Praha 1</div>
+      <div class="footer-legal">
+        <a href="#" data-i18n="privacy">Privacy Policy</a>
+        <a href="#" data-i18n="terms">Terms of Service</a>
+        <a href="#" data-i18n="gdpr">GDPR</a>
+      </div>
+    </div>
+  </footer>
+
+</div><!-- /scroll-root -->
+
+<!-- ── Data Pulse Labels ── -->
+<div class="data-pulse" id="pulse-1">MANICURE</div>
+<div class="data-pulse" id="pulse-2">PEDICURE</div>
+<div class="data-pulse" id="pulse-3">GEL ART</div>
+<div class="data-pulse" id="pulse-4">PRAGUE 1</div>
+<div class="data-pulse" id="pulse-5">LUXURY · NÁRODNÍ</div>
+<div class="data-pulse" id="pulse-6">NAIL ARCHITECTURE</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   SECTION 1 — i18n Dictionary
+   ═══════════════════════════════════════════════════════════════ */
+const DICT = {
+  en: {
+    hero_eyebrow:   'Prague 1 · Národní 19 · Premium Beauty Atelier',
+    hero_line1:     'The Art of',
+    hero_line2:     'Luxury Beauty',
+    hero_sub:       'Nail Architecture & Refined Aesthetics',
+    scroll_hint:    'Scroll',
+    services_label: 'Our Services',
+    services_title1:'Precision',
+    services_title2:'Crafted',
+    services_title3:'for Excellence',
+    card1_tag:  'Nail Architecture', card1_title: 'Sculptural Nail Art & Design',
+    card1_desc: 'Our master nail architects blend medical-grade precision with avant-garde artistry. From classical French elegance to bold 3D sculptural motifs — every nail is a miniature canvas curated by Prague\'s finest hands.',
+    card1_price:'from 1 890 CZK',
+    card2_tag:  'Premium Cosmetics', card2_title: 'Luxury Facial & Skin Ritual',
+    card2_desc: 'Indulge in our bespoke skincare protocols — BABOR, La Mer, and Swiss cellular therapy combined with advanced dermaplaning, microcurrent sculpting, and 24K gold infusion masks for a luminous complexion.',
+    card2_price:'from 2 490 CZK',
+    card3_tag:  'Pedicure', card3_title: 'Ritual Foot & Sole Therapy',
+    card3_desc: 'Medical pedicure elevated to a wellness ceremony. Spa thermal wraps, callus removal by certified specialists, and lacquer finishing with premium OPI and Gelish collections.',
+    card3_price:'from 1 290 CZK',
+    card4_tag:  'Massages', card4_title: 'Luxury Body & Relaxation Massage',
+    card4_desc: 'Swedish, deep-tissue, hot-stone, and signature Prague aromatic rituals tailored to your body\'s needs. Our therapists hold certifications in European and Eastern wellness traditions.',
+    card4_price:'from 1 690 CZK',
+    card5_tag:  'Exclusive Packages', card5_title: 'The Praha Prestige Full-Day Ritual',
+    card5_desc: 'Our signature full-day beauty immersion: morning facial ritual, chef-curated lunch, afternoon nail architecture session, evening massage & finishing. The complete luxury experience.',
+    card5_price:'from 8 900 CZK',
+    spec_label: 'Our Team', spec_title1: 'Master', spec_title2: 'Specialists',
+    spec1_role: 'Head Nail Architect · 14 years',
+    spec1_bio:  'International finalist at the Nailympia Championships, London. Anežka fuses Czech artisanal tradition with contemporary nail sculpture techniques, creating wearable miniature art.',
+    spec2_role: 'Senior Aesthetician · 11 years',
+    spec2_bio:  'Certified BABOR and Swiss Cellulite Academy specialist. Martina\'s microcurrent sculpting protocols have earned acclaim among Prague\'s most demanding clientele.',
+    spec3_role: 'Wellness Therapist · 9 years',
+    spec3_bio:  'Trained at the Thai Massage Institute in Chiang Mai and the Vienna Wellness Academy. Klára\'s intuitive approach to bodywork restores equilibrium at the deepest level.',
+    map_label:  'Find Us', map_title: 'Národní 19,',
+    addr_label: 'Address', hours_label: 'Opening Hours', hours_value: 'Monday – Saturday',
+    sunday: 'Sunday: 10:00 – 18:00', contact_label: 'Contact', transit_label: 'Public Transport',
+    transit_value: 'Metro B — Národní třída (2 min walk)\nTram 6, 9, 18, 22 — Národní divadlo',
+    footer_desc: 'Prague\'s premier beauty atelier at the heart of the city.',
+    footer_services: 'Services', footer_atelier: 'Atelier', footer_follow: 'Follow',
+    f_nail: 'Nail Architecture', f_facial: 'Luxury Facials', f_pedi: 'Medical Pedicure',
+    f_massage: 'Massage Rituals', f_pkg: 'VIP Packages', f_about: 'About Us',
+    f_team: 'Our Team', f_booking: 'Book Online', f_gift: 'Gift Cards',
+    f_reviews: 'Google Reviews', privacy: 'Privacy Policy', terms: 'Terms of Service', gdpr: 'GDPR',
+  },
+  cz: {
+    hero_eyebrow:   'Praha 1 · Národní 19 · Prémiový Beauty Ateliér',
+    hero_line1:     'Umění',
+    hero_line2:     'Luxusní Krásy',
+    hero_sub:       'Nehtová Architektura & Rafinovaná Estetika',
+    scroll_hint:    'Scrollujte',
+    services_label: 'Naše Služby',
+    services_title1:'Precizně',
+    services_title2:'Tvořeno',
+    services_title3:'pro Dokonalost',
+    card1_tag: 'Nehtová Architektura', card1_title: 'Sochařský Nail Art & Design',
+    card1_desc: 'Naši mistři nehtové architektury propojují lékařskou přesnost s avantgardní tvořivostí. Od klasické francouzské elegance po odvážné 3D motivy — každý nehet je miniaturní plátno.',
+    card1_price:'od 1 890 Kč',
+    card2_tag: 'Prémiová Kosmetika', card2_title: 'Luxusní Facial & Rituál Péče o Pleť',
+    card2_desc: 'Dopřejte si naše individuální protokoly péče o pleť — BABOR, La Mer a švýcarská buněčná terapie v kombinaci s dermaplaning, mikroproudy a zlatou infuzní maskou.',
+    card2_price:'od 2 490 Kč',
+    card3_tag: 'Pedikúra', card3_title: 'Rituál Péče o Nohy & Chodidla',
+    card3_desc: 'Lékařská pedikúra povýšená na wellness ceremoniál. Termální zábal, odstranění mozolů certifikovanými specialisty a lakování prémiovými kolekcemi OPI a Gelish.',
+    card3_price:'od 1 290 Kč',
+    card4_tag: 'Masáže', card4_title: 'Luxusní Tělová & Relaxační Masáž',
+    card4_desc: 'Švédské, hloubkové tkáňové, horké kameny a pražský aromatický rituál přizpůsobené vašemu tělu. Naši terapeuti jsou certifikováni v evropských i východních wellness tradicích.',
+    card4_price:'od 1 690 Kč',
+    card5_tag: 'Exkluzivní Balíčky', card5_title: 'Praha Prestige — Celodenní Rituál',
+    card5_desc: 'Naše celodenní beauty immerse: ranní rituál pleti, oběd, odpolední nehtová architektura, večerní masáž a finalizace. Kompletní luxusní zážitek Národní 19.',
+    card5_price:'od 8 900 Kč',
+    spec_label: 'Náš Tým', spec_title1: 'Mistrovští', spec_title2: 'Specialisté',
+    spec1_role: 'Hlavní Nehtová Architektka · 14 let', spec1_bio: 'Mezinárodní finalistka Nailympia Championships v Londýně. Anežka propojuje českou řemeslnou tradici s moderními technikami nehtové skulptury.',
+    spec2_role: 'Senior Estetička · 11 let', spec2_bio: 'Certifikovaná BABOR a Swiss Cellulite Academy specialistka. Martininy protokoly mikroproudového modelingu si získaly uznání u nejnáročnější pražské klientely.',
+    spec3_role: 'Wellness Terapeutka · 9 let', spec3_bio: 'Vyškolena v Thai Massage Institute v Chiang Mai a Vienna Wellness Academy. Klářin intuitivní přístup k terapii obnoví rovnováhu na nejhlubší úrovni.',
+    map_label: 'Kde Nás Najdete', map_title: 'Národní 19,',
+    addr_label: 'Adresa', hours_label: 'Otevírací Doba', hours_value: 'Pondělí – Sobota',
+    sunday: 'Neděle: 10:00 – 18:00', contact_label: 'Kontakt', transit_label: 'MHD',
+    transit_value: 'Metro B — Národní třída (2 min pěšky)\nTramvaj 6, 9, 18, 22 — Národní divadlo',
+    footer_desc: 'Přední pražský beauty ateliér v srdci města.',
+    footer_services: 'Služby', footer_atelier: 'Ateliér', footer_follow: 'Sledujte Nás',
+    f_nail: 'Nehtová Architektura', f_facial: 'Luxusní Facials', f_pedi: 'Lékařská Pedikúra',
+    f_massage: 'Masážní Rituály', f_pkg: 'VIP Balíčky', f_about: 'O Nás',
+    f_team: 'Náš Tým', f_booking: 'Online Rezervace', f_gift: 'Dárkové Poukazy',
+    f_reviews: 'Google Recenze', privacy: 'Ochrana Soukromí', terms: 'Podmínky Služby', gdpr: 'GDPR',
+  },
+  ru: {
+    hero_eyebrow:   'Прага 1 · Národní 19 · Премиум Бьюти Ателье',
+    hero_line1:     'Искусство',
+    hero_line2:     'Роскошной Красоты',
+    hero_sub:       'Ногтевая Архитектура & Изысканная Эстетика',
+    scroll_hint:    'Прокрутите',
+    services_label: 'Наши Услуги',
+    services_title1:'Мастерство',
+    services_title2:'Совершенства',
+    services_title3:'в каждой детали',
+    card1_tag: 'Ногтевая Архитектура', card1_title: 'Скульптурный Nail Art & Дизайн',
+    card1_desc: 'Наши мастера ногтевой архитектуры сочетают медицинскую точность с авангардным искусством. От классической французской элегантности до смелых 3D-мотивов — каждый ноготь уникален.',
+    card1_price:'от 1 890 CZK',
+    card2_tag: 'Премиум Косметология', card2_title: 'Люкс Уход & Ритуал для Кожи',
+    card2_desc: 'Насладитесь нашими индивидуальными протоколами ухода — BABOR, La Mer и швейцарская клеточная терапия в сочетании с дермапланингом, микротоками и маской с 24K золотом.',
+    card2_price:'от 2 490 CZK',
+    card3_tag: 'Педикюр', card3_title: 'Ритуал Ухода за Стопами',
+    card3_desc: 'Медицинский педикюр, возведённый в церемонию велнеса. Термальное обёртывание, удаление мозолей сертифицированными специалистами и покрытие лаком премиальных коллекций.',
+    card3_price:'от 1 290 CZK',
+    card4_tag: 'Массаж', card4_title: 'Люкс Массаж & Терапия Тела',
+    card4_desc: 'Шведский, глубокотканевый, горячие камни и пражский ароматический ритуал, адаптированные к вашему телу. Наши терапевты имеют сертификаты европейских и восточных школ.',
+    card4_price:'от 1 690 CZK',
+    card5_tag: 'Эксклюзивные Пакеты', card5_title: 'Прага Престиж — Полный День Ритуала',
+    card5_desc: 'Полный день бьюти-иммерсии: утренний ритуал для кожи, обед, послеобеденная ногтевая архитектура, вечерний массаж и финальный штрих. Полное роскошное погружение.',
+    card5_price:'от 8 900 CZK',
+    spec_label: 'Наша Команда', spec_title1: 'Мастера', spec_title2: 'Специалисты',
+    spec1_role: 'Главный Ногтевой Архитектор · 14 лет', spec1_bio: 'Международный финалист Nailympia Championships в Лондоне. Анежка соединяет чешскую ремесленную традицию с современной скульптурой для ногтей.',
+    spec2_role: 'Старший Эстетист · 11 лет', spec2_bio: 'Сертифицированный специалист BABOR и Swiss Cellulite Academy. Протоколы микротокового моделирования Мартины завоевали признание самой взыскательной клиентуры Праги.',
+    spec3_role: 'Велнес Терапевт · 9 лет', spec3_bio: 'Обучение в Thai Massage Institute в Чиангмае и Vienna Wellness Academy. Интуитивный подход Клары к телесной работе восстанавливает равновесие на глубинном уровне.',
+    map_label: 'Как Нас Найти', map_title: 'Národní 19,',
+    addr_label: 'Адрес', hours_label: 'Часы Работы', hours_value: 'Понедельник – Суббота',
+    sunday: 'Воскресенье: 10:00 – 18:00', contact_label: 'Контакт', transit_label: 'Общественный Транспорт',
+    transit_value: 'Метро B — Národní třída (2 мин пешком)\nТрамвай 6, 9, 18, 22 — Národní divadlo',
+    footer_desc: 'Ведущее бьюти-ателье Праги в самом центре города.',
+    footer_services: 'Услуги', footer_atelier: 'Ателье', footer_follow: 'Подписывайтесь',
+    f_nail: 'Ногтевая Архитектура', f_facial: 'Люкс Уход за Лицом', f_pedi: 'Медицинский Педикюр',
+    f_massage: 'Массажные Ритуалы', f_pkg: 'VIP Пакеты', f_about: 'О Нас',
+    f_team: 'Наша Команда', f_booking: 'Онлайн Запись', f_gift: 'Подарочные Сертификаты',
+    f_reviews: 'Отзывы Google', privacy: 'Политика Конфиденциальности', terms: 'Условия Сервиса', gdpr: 'GDPR',
+  }
+};
+
+let currentLang = 'en';
+
+function applyLang(lang) {
+  currentLang = lang;
+  const d = DICT[lang];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (d[key] !== undefined) el.textContent = d[key];
+  });
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
+  });
+}
+
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', () => applyLang(btn.getAttribute('data-lang')));
+});
+
+
+/* ═══════════════════════════════════════════════════════════════
+   SECTION 2 — Three.js Setup
+   ═══════════════════════════════════════════════════════════════ */
+const canvas3d = document.getElementById('webgl-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas: canvas3d, alpha: true, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(0, 0, 4.8);
+
+// The Core Mesh — Glossy Nail Aesthetic
+const geometry = new THREE.TorusKnotGeometry(1.2, 0.32, 160, 24, 2, 3);
+const material = new THREE.MeshStandardMaterial({
+  color: 0xffe4e1,
+  metalness: 0.9,
+  roughness: 0.02
+});
+
+const mesh = new THREE.Mesh(geometry, material);
+mesh.position.set(0, 0, 0);
+scene.add(mesh);
+
+// Compensated Studio Lighting
+const dirLight1 = new THREE.DirectionalLight(0xffffff, 5.0);
+dirLight1.position.set(6, 6, 6);
+scene.add(dirLight1);
+
+const dirLight2 = new THREE.DirectionalLight(0xffb6c1, 3.5);
+dirLight2.position.set(-6, -2, -4);
+scene.add(dirLight2);
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+scene.add(ambientLight);
+
+// A subtle fill light from below for the pearl effect
+const fillLight = new THREE.DirectionalLight(0xffd0dc, 2.0);
+fillLight.position.set(0, -4, 3);
+scene.add(fillLight);
+
+// Mouse tracking with dampening
+let mouseTarget = { x: 0, y: 0 };
+let mouseCurrent = { x: 0, y: 0 };
+
+document.addEventListener('mousemove', (e) => {
+  mouseTarget.x = (e.clientX / window.innerWidth - 0.5) * 2;
+  mouseTarget.y = -(e.clientY / window.innerHeight - 0.5) * 2;
+});
+
+// Scroll state
+let scrollProgress = 0;
+let wireframeActive = false;
+let reassembleActive = false;
+
+window.addEventListener('scroll', () => {
+  scrollProgress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+});
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+
+/* ═══════════════════════════════════════════════════════════════
+   SECTION 3 — Particle System (2D Canvas)
+   ═══════════════════════════════════════════════════════════════ */
+const particleCanvas = document.getElementById('particle-canvas');
+const ctx = particleCanvas.getContext('2d');
+particleCanvas.width  = window.innerWidth;
+particleCanvas.height = window.innerHeight;
+
+const PARTICLE_COUNT = 2600;
+const particles = [];
+
+function createParticle(i) {
+  const angle = Math.random() * Math.PI * 2;
+  const radius = Math.random() * Math.min(window.innerWidth, window.innerHeight) * 0.45;
+  return {
+    // base (ambient) position — orbiting center
+    bx: window.innerWidth  / 2 + Math.cos(angle) * radius,
+    by: window.innerHeight / 2 + Math.sin(angle) * radius,
+    // current position
+    x: window.innerWidth  / 2 + Math.cos(angle) * radius,
+    y: window.innerHeight / 2 + Math.sin(angle) * radius,
+    // diagonal stream target
+    tx: 0, ty: 0,
+    speed: 0.8 + Math.random() * 1.8,
+    size:  0.6 + Math.random() * 1.4,
+    opacity: 0.15 + Math.random() * 0.4,
+    angle: angle,
+    orbitR: radius,
+    orbitSpeed: (Math.random() - 0.5) * 0.004,
+    isDiag: false,
+    diagProgress: 0,
+    diagDelay: Math.random() * 0.8,
+  };
+}
+
+for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(createParticle(i));
+
+let particleMode = 'ambient'; // 'ambient' | 'diagonal' | 'reassemble'
+let diagT = 0; // global diagonal progress 0→1
+
+window.addEventListener('resize', () => {
+  particleCanvas.width  = window.innerWidth;
+  particleCanvas.height = window.innerHeight;
+});
+
+function drawParticles(dt) {
+  ctx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+
+  if (particleMode === 'ambient') {
+    // gentle orbiting ambient glow dots
+    particles.forEach(p => {
+      p.angle += p.orbitSpeed;
+      p.x = window.innerWidth  / 2 + Math.cos(p.angle) * p.orbitR;
+      p.y = window.innerHeight / 2 + Math.sin(p.angle) * p.orbitR;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,182,193,${p.opacity * 0.4})`;
+      ctx.fill();
+    });
+    return;
+  }
+
+  if (particleMode === 'diagonal') {
+    // diagonal neon-pink lines shooting up-right at 45 degrees
+    diagT = Math.min(diagT + dt * 0.35, 1);
+
+    // Draw diagonal grid lines as faint guides
+    const lineCount = 28;
+    for (let i = 0; i < lineCount; i++) {
+      const offset = (i / lineCount) * (window.innerWidth + window.innerHeight);
+      const startX = offset - window.innerHeight;
+      const startY = window.innerHeight;
+      const endX   = offset;
+      const endY   = 0;
+
+      const prog = Math.max(0, Math.min(1, (diagT - i / lineCount * 0.5) / 0.6));
+      const curEndX = startX + (endX - startX) * prog;
+      const curEndY = startY + (endY - startY) * prog;
+
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(curEndX, curEndY);
+
+      const gradient = ctx.createLinearGradient(startX, startY, curEndX, curEndY);
+      gradient.addColorStop(0, 'rgba(255,182,193,0)');
+      gradient.addColorStop(0.5, `rgba(255,182,193,${0.12 * prog})`);
+      gradient.addColorStop(1, `rgba(255,182,193,${0.28 * prog})`);
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = 0.7 + Math.random() * 0.5;
+      ctx.stroke();
+    }
+
+    // Particle dots streaming diagonally
+    particles.forEach((p, idx) => {
+      const localT = Math.max(0, (diagT - p.diagDelay * 0.4) / 0.8);
+      if (localT <= 0) return;
+
+      // Calculate diagonal stream — going up and right
+      const streamOffset = (idx / PARTICLE_COUNT) * (window.innerWidth * 1.5);
+      const startX = -window.innerWidth * 0.2 + streamOffset % (window.innerWidth * 1.2);
+      const startY = window.innerHeight * 1.1;
+      const endX   = startX + window.innerWidth * 1.3;
+      const endY   = startY - window.innerHeight * 1.3;
+
+      p.x = startX + (endX - startX) * localT;
+      p.y = startY + (endY - startY) * localT;
+
+      const tail = 22;
+      const tx = p.x - (endX - startX) * Math.min(localT, 0.04);
+      const ty = p.y - (endY - startY) * Math.min(localT, 0.04);
+
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(p.x, p.y);
+
+      const g2 = ctx.createLinearGradient(tx, ty, p.x, p.y);
+      g2.addColorStop(0, 'rgba(255,182,193,0)');
+      g2.addColorStop(1, `rgba(255,182,193,${Math.min(1, localT * 2) * p.opacity})`);
+      ctx.strokeStyle = g2;
+      ctx.lineWidth = p.size * 1.5;
+      ctx.stroke();
+
+      // dot at head
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * 1.2, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,182,193,${Math.min(1, localT * 2) * p.opacity * 1.5})`;
+      ctx.fill();
+    });
+    return;
+  }
+
+  if (particleMode === 'reassemble') {
+    diagT = Math.max(diagT - dt * 0.6, 0);
+
+    particles.forEach((p, idx) => {
+      // lerp back to orbital position
+      p.angle += p.orbitSpeed;
+      const targetX = window.innerWidth  / 2 + Math.cos(p.angle) * p.orbitR;
+      const targetY = window.innerHeight / 2 + Math.sin(p.angle) * p.orbitR;
+      p.x += (targetX - p.x) * 0.04;
+      p.y += (targetY - p.y) * 0.04;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,182,193,${p.opacity * 0.4})`;
+      ctx.fill();
+    });
+
+    if (diagT <= 0) particleMode = 'ambient';
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   SECTION 4 — Data Pulse Label Animations
+   ═══════════════════════════════════════════════════════════════ */
+const pulses = [
+  document.getElementById('pulse-1'),
+  document.getElementById('pulse-2'),
+  document.getElementById('pulse-3'),
+  document.getElementById('pulse-4'),
+  document.getElementById('pulse-5'),
+  document.getElementById('pulse-6'),
+];
+
+function animatePulse(el, startX, startY, index) {
+  const duration = 2.2 + Math.random() * 1.5;
+  const travelX  = window.innerWidth  * 0.7;
+  const travelY  = -window.innerHeight * 0.7;
+
+  gsap.set(el, { x: startX, y: startY, opacity: 0 });
+  gsap.to(el, {
+    x: startX + travelX,
+    y: startY + travelY,
+    opacity: 0,
+    duration: duration,
+    delay: index * 0.28,
+    keyframes: [
+      { opacity: 0, duration: 0 },
+      { opacity: 0.9, duration: duration * 0.2 },
+      { opacity: 0.9, duration: duration * 0.5 },
+      { opacity: 0, duration: duration * 0.3 },
+    ],
+    ease: 'power1.inOut',
+    onComplete: () => {
+      if (particleMode === 'diagonal') {
+        const nx = Math.random() * window.innerWidth * 0.5;
+        const ny = window.innerHeight * 0.6 + Math.random() * window.innerHeight * 0.3;
+        animatePulse(el, nx, ny, 0);
+      }
+    }
+  });
+}
+
+let pulsesActive = false;
+
+function startPulses() {
+  if (pulsesActive) return;
+  pulsesActive = true;
+  pulses.forEach((el, i) => {
+    const startX = Math.random() * window.innerWidth * 0.4;
+    const startY = window.innerHeight * 0.5 + Math.random() * window.innerHeight * 0.3;
+    animatePulse(el, startX, startY, i);
+  });
+}
+
+function stopPulses() {
+  pulsesActive = false;
+  pulses.forEach(el => gsap.killTweensOf(el));
+  gsap.to(pulses, { opacity: 0, duration: 0.6 });
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   SECTION 5 — Three.js Render Loop
+   ═══════════════════════════════════════════════════════════════ */
+const clock = new THREE.Clock();
+
+function renderLoop() {
+  requestAnimationFrame(renderLoop);
+  const dt = clock.getDelta();
+  const elapsed = clock.getElapsedTime();
+
+  // Mouse dampening
+  mouseCurrent.x = THREE.MathUtils.lerp(mouseCurrent.x, mouseTarget.x, 0.05);
+  mouseCurrent.y = THREE.MathUtils.lerp(mouseCurrent.y, mouseTarget.y, 0.05);
+
+  // Mesh rotation — base slow rotation + mouse influence
+  mesh.rotation.x += 0.0025 + mouseCurrent.y * 0.008;
+  mesh.rotation.y += 0.004  + mouseCurrent.x * 0.008;
+
+  // Light pulsing for pearl shimmer
+  dirLight1.intensity = 5.0 + Math.sin(elapsed * 0.8) * 0.6;
+  dirLight2.intensity = 3.5 + Math.cos(elapsed * 1.1) * 0.4;
+
+  // Particle canvas
+  drawParticles(dt);
+
+  renderer.render(scene, camera);
+}
+
+renderLoop();
+
+
+/* ═══════════════════════════════════════════════════════════════
+   SECTION 6 — GSAP Scroll Animations
+   ═══════════════════════════════════════════════════════════════ */
+gsap.registerPlugin(ScrollTrigger);
+
+// ─ Navbar scroll state
+ScrollTrigger.create({
+  start: 'top -80px',
+  onUpdate: (self) => {
+    document.getElementById('navbar').classList.toggle('scrolled', self.scroll() > 80);
+  }
+});
+
+// ─ Hero cinematic zoom on scroll start
+ScrollTrigger.create({
+  trigger: '#hero',
+  start: 'top top',
+  end: 'bottom top',
+  scrub: 1.5,
+  onUpdate: (self) => {
+    const p = self.progress;
+    // Camera slowly zooms INTO the mesh (from 4.8 down to 1.8)
+    camera.position.z = THREE.MathUtils.lerp(4.8, 1.8, p);
+    // Mesh gently scales up as camera approaches
+    mesh.scale.setScalar(1 + p * 0.18);
+    // Fade out hero text
+    gsap.set('#hero-title',   { opacity: Math.max(0, 1 - p * 2.5) });
+    gsap.set('#hero-sub',     { opacity: Math.max(0, 1 - p * 2.8) });
+    gsap.set('#hero-address', { opacity: Math.max(0, 1 - p * 2.8) });
+    gsap.set('#hero-eyebrow', { opacity: Math.max(0, 1 - p * 2.2) });
+  }
+});
+
+// ─ Services section — wireframe + diagonal particles
+ScrollTrigger.create({
+  trigger: '#services',
+  start: 'top 65%',
+  end: 'bottom 20%',
+  onEnter: () => {
+    // Switch mesh to wireframe matrix
+    gsap.to(material.color, { r: 1.0, g: 0.71, b: 0.75, duration: 1.2 });
+    gsap.delayedCall(0.3, () => { material.wireframe = true; });
+
+    // Activate particle diagonal mode
+    particleCanvas.style.opacity = '1';
+    diagT = 0;
+    particleMode = 'diagonal';
+
+    // Start data pulses
+    startPulses();
+  },
+  onLeave: () => {
+    // Reassemble
+    particleMode = 'reassemble';
+    stopPulses();
+    gsap.delayedCall(0.5, () => {
+      material.wireframe = false;
+      gsap.to(material.color, { r: 1.0, g: 0.894, b: 0.882, duration: 1.4 });
+    });
+    // Camera returns
+    gsap.to(camera.position, { z: 4.8, duration: 2.2, ease: 'power2.out' });
+    gsap.to(mesh.scale, { x: 1, y: 1, z: 1, duration: 1.8, ease: 'power2.out' });
+    gsap.delayedCall(1.5, () => { particleCanvas.style.opacity = '0'; });
+  },
+  onEnterBack: () => {
+    particleCanvas.style.opacity = '1';
+    material.wireframe = true;
+    diagT = 0;
+    particleMode = 'diagonal';
+    startPulses();
+  },
+  onLeaveBack: () => {
+    material.wireframe = false;
+    particleMode = 'ambient';
+    stopPulses();
+    gsap.to(material.color, { r: 1.0, g: 0.894, b: 0.882, duration: 1.2 });
+    gsap.delayedCall(0.8, () => { particleCanvas.style.opacity = '0'; });
+  }
+});
+
+// ─ Bento diagonal slide
+ScrollTrigger.create({
+  trigger: '#bento-container',
+  start: 'top 40%',
+  end: 'bottom top',
+  pin: false,
+  scrub: 1.2,
+  onUpdate: (self) => {
+    const p = self.progress;
+    const x = p * window.innerWidth * 1.3;
+    const y = -p * window.innerHeight * 1.3;
+    gsap.set('#bento-container', { x, y });
+  },
+  onLeaveBack: () => {
+    gsap.set('#bento-container', { x: 0, y: 0 });
+  }
+});
+
+// ─ General reveal animations
+gsap.utils.toArray('.reveal').forEach(el => {
+  gsap.fromTo(el,
+    { opacity: 0, y: 35 },
+    {
+      opacity: 1, y: 0,
+      duration: 1.1,
+      ease: 'power2.out',
+      scrollTrigger: {
+        trigger: el,
+        start: 'top 84%',
+        toggleActions: 'play none none reverse'
+      }
+    }
+  );
+});
+
+// ─ Specialists section — mesh back to center
+ScrollTrigger.create({
+  trigger: '#specialists',
+  start: 'top 60%',
+  onEnter: () => {
+    gsap.to(camera.position, { z: 4.8, duration: 2.0, ease: 'power3.out' });
+    gsap.to(mesh.scale, { x: 1, y: 1, z: 1, duration: 1.6, ease: 'power3.out' });
+    material.wireframe = false;
+    particleMode = 'ambient';
+    particleCanvas.style.opacity = '0';
+  }
+});
+
+
+/* ═══════════════════════════════════════════════════════════════
+   SECTION 7 — Bento Card 3D Tilt
+   ═══════════════════════════════════════════════════════════════ */
+document.querySelectorAll('[data-tilt]').forEach(card => {
+  card.addEventListener('mousemove', (e) => {
+    const rect = card.getBoundingClientRect();
+    const cx = rect.left + rect.width  / 2;
+    const cy = rect.top  + rect.height / 2;
+    const dx = (e.clientX - cx) / (rect.width  / 2);
+    const dy = (e.clientY - cy) / (rect.height / 2);
+    card.style.transform = `perspective(800px) rotateX(${-dy * 6}deg) rotateY(${dx * 6}deg) scale(1.02)`;
+  });
+  card.addEventListener('mouseleave', () => {
+    card.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg) scale(1)';
+    card.style.transition = 'transform 0.55s cubic-bezier(.23,1,.32,1)';
+  });
+  card.addEventListener('mouseenter', () => {
+    card.style.transition = 'transform 0.1s ease';
+  });
+});
+
+
+/* ═══════════════════════════════════════════════════════════════
+   SECTION 8 — Hero Intro Animation
+   ═══════════════════════════════════════════════════════════════ */
+const introOverlay = document.getElementById('intro-overlay');
+const introText    = document.getElementById('intro-text');
+
+const tl = gsap.timeline();
+
+tl.from(introText, { opacity: 0, y: 20, duration: 1.0, ease: 'power2.out', delay: 0.3 })
+  .to(introText,   { opacity: 0, y: -20, duration: 0.8, ease: 'power2.in', delay: 0.8 })
+  .to(introOverlay, {
+    opacity: 0,
+    duration: 0.7,
+    ease: 'power2.inOut',
+    onComplete: () => { introOverlay.style.display = 'none'; }
+  })
+  .to('#hero-title',   { opacity: 1, y: 0, duration: 1.2, ease: 'power3.out' }, '-=0.2')
+  .to('#hero-sub',     { opacity: 1, y: 0, duration: 1.0, ease: 'power3.out' }, '-=0.8')
+  .to('#hero-address', { opacity: 1, y: 0, duration: 0.9, ease: 'power3.out' }, '-=0.7');
+
+
+/* ═══════════════════════════════════════════════════════════════
+   SECTION 9 — Specialist card hover grayscale-to-color
+   ═══════════════════════════════════════════════════════════════ */
+// Already handled by CSS filter transitions on .specialist-card:hover .specialist-avatar
+
+</script>
+</body>
+</html>
